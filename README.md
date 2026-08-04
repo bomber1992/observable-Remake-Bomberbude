@@ -1,3 +1,6 @@
+<img width="1897" height="935" alt="Website-Profiler" src="https://github.com/user-attachments/assets/62580211-9fe3-4d1f-97fd-73eaeb08cdc7" />
+
+
 # Observable - Remake V1.0
 
 Observable - Remake V1.0 by Bomberbude.de for Minecraft 26.1.2 and NeoForge 26.1.2.74 or newer compatible 26.1.2 builds. It provides tick profiling, in-world lag visualization, the Bomberbude profile service and optional AE2 grid-tick profiling.
