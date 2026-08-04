@@ -1,0 +1,34 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="${mod_license}"
+issueTrackerURL="https://github.com/bomber1992/observable-Remake-Bomberbude/issues"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+displayURL="https://bomberbude.de/observable/"
+logoFile="observable.png"
+authors="Bomberbude.de"
+credits="Remake modifications Copyright (c) 2026 Bomberbude.de; based on the original Observable project by tasgon and contributors"
+description='''
+Observable - Remake by Bomberbude.de for Minecraft 26.1.2 and NeoForge 26.1.2.74 or newer compatible builds. Based on the original Observable project by tasgon. Client installation is optional.
+'''
+
+[[dependencies.${mod_id}]]
+modId="neoforge"
+type="required"
+versionRange="${neo_version_range}"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.${mod_id}]]
+modId="minecraft"
+type="required"
+versionRange="${minecraft_version_range}"
+ordering="NONE"
+side="BOTH"
+
+
+[[mixins]]
+config="observable.common.json"

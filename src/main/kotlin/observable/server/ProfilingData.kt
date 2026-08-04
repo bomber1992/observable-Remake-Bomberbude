@@ -1,0 +1,139 @@
+@file:UseSerializers(
+    IdentifierSerializer::class,
+    BlockPosSerializer::class
+)
+
+package observable.server
+
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
+import kotlinx.serialization.json.*
+import net.minecraft.core.BlockPos
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.resources.ResourceKey
+import net.minecraft.resources.Identifier
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.level.Level
+import observable.net.*
+
+fun getPosition(obj: Any?): BlockPos =
+    when (obj) {
+        is Entity -> obj.blockPosition()
+        is BlockPos -> obj
+        else -> BlockPos.ZERO
+    }
+
+@Serializable
+data class ProfilingData(
+    val entities: Map<Identifier, List<Entry>>,
+    val blocks: Map<Identifier, List<Entry>>,
+    val traces: SerializedTraceMap?,
+    val ticks: Int
+) {
+    companion object {
+        fun create(
+            entities: Map<Entity, Profiler.TimingData>,
+            blocks: Map<ResourceKey<Level>, Map<BlockPos, Profiler.TimingData>>,
+            positionedTimings: Collection<Profiler.PositionedTimingData>,
+            ticks: Int,
+            traceMap: TraceMap? = null
+        ): ProfilingData {
+            val entityEntries =
+                entities
+                    .asIterable()
+                    .groupBy { it.key.level().dimension().identifier() }
+                    .mapValues { (_, entries) ->
+                        entries.map { (entity, data) ->
+                            Entry(entity, BuiltInRegistries.ENTITY_TYPE.getKey(entity.type).toString(), data)
+                        }
+                    }
+
+            val blockEntries = mutableMapOf<Identifier, MutableList<Entry>>()
+
+            blocks.forEach { (level, posMap) ->
+                blockEntries
+                    .getOrPut(level.identifier()) { mutableListOf() }
+                    .addAll(posMap.map { (pos, data) -> Entry(pos, data.name, data) })
+            }
+
+            positionedTimings.forEach { positioned ->
+                blockEntries
+                    .getOrPut(positioned.dimension.identifier()) { mutableListOf() }
+                    .add(Entry(positioned.position, positioned.data.name, positioned.data))
+            }
+
+            return ProfilingData(
+                entityEntries,
+                blockEntries,
+                traceMap?.let { SerializedTraceMap.create(it) },
+                ticks
+            )
+        }
+    }
+
+    @Serializable
+    data class Entry(
+        val entityId: Int? = null,
+        val position: BlockPos,
+        val type: String,
+        val rate: Double,
+        val ticks: Int,
+        val traces: SerializedTraceMap
+    ) {
+        constructor(
+            obj: Any,
+            type: String,
+            data: Profiler.TimingData
+        ) : this(
+            (obj as? Entity)?.id,
+            getPosition(obj),
+            type,
+            data.time.toDouble() / data.ticks.toDouble(),
+            data.ticks,
+            SerializedTraceMap.create(data.traces)
+        )
+    }
+
+    @Serializable
+    data class SerializedStackTrace(
+        val classname: String,
+        val fileName: String?,
+        val lineNumber: Int,
+        val methodName: String
+    ) {
+        constructor(
+            el: StackTraceElement
+        ) : this(el.className, el.fileName, el.lineNumber, el.methodName)
+    }
+
+    @Serializable
+    data class SerializedTraceMap(
+        val className: String,
+        val methodName: String,
+        val children: List<SerializedTraceMap>,
+        val count: Int
+    ) {
+        companion object {
+            fun create(traceMap: TraceMap): SerializedTraceMap {
+                Remapper.transform(traceMap)
+
+                return SerializedTraceMap(
+                    traceMap.className,
+                    traceMap.methodName,
+                    traceMap.children
+                        .map { (_, map) ->
+                            Remapper.transform(map)
+                            SerializedTraceMap.create(map)
+                        }
+                        .sortedByDescending { it.count },
+                    traceMap.count
+                )
+            }
+        }
+
+        val classMethod
+            get() = "$className.$methodName"
+    }
+}
+
+@Serializable data class DataWithDiagnostics(val data: ProfilingData, val diagnostics: JsonObject)

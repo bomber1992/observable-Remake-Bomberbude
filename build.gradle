@@ -1,0 +1,149 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.143'
+    id 'org.jetbrains.kotlin.jvm' version '2.3.10'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.10'
+}
+
+version = mod_version
+group = mod_group_id
+
+// Minecraft 26.1.2 targets Java 25. Gradle 8.8 does not support Java 25
+// as its runtime or toolchain. Use the 9.2.1 wrapper shipped with this project;
+// this matches the official NeoForge 26.1.2 ModDevGradle MDK stack.
+if (org.gradle.util.GradleVersion.current() < org.gradle.util.GradleVersion.version('9.1.0')) {
+    throw new GradleException("Gradle 9.1+ is required for Java 25. Run the included gradlew/gradlew.bat wrapper (Gradle 9.2.1).")
+}
+
+base {
+    archivesName = "Observable-Remake"
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+kotlin {
+    jvmToolchain(25)
+}
+
+repositories {
+    mavenCentral()
+}
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client { client() }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+        configureEach {
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+dependencies {
+    // Compile only: AE2 remains an optional runtime integration.
+    // Resolve only AE2's API classifier and do not import AE2's runtime dependency graph.
+    // The NeoForge variant collision was caused by the obsolete Gradle/MDG stack, not
+    // by this dependency, but keeping it isolated is correct for an optional integration.
+    compileOnly("org.appliedenergistics:appliedenergistics2:${ae2_version}:api@jar") {
+        transitive = false
+    }
+
+    // The Java @Mod entrypoint allows the Kotlin runtime to be bundled directly.
+    // NeoForge's Jar-in-Jar resolver deduplicates these libraries across installed mods.
+    jarJar(implementation('org.jetbrains.kotlin:kotlin-stdlib:2.3.10')) {
+        version {
+            strictly '[2.3.10,2.4.0)'
+            prefer '2.3.10'
+        }
+    }
+    jarJar(implementation('org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.10.0')) {
+        version {
+            strictly '[1.10.0,1.11.0)'
+            prefer '1.10.0'
+        }
+    }
+    jarJar(implementation('org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.10.0')) {
+        version {
+            strictly '[1.10.0,1.11.0)'
+            prefer '1.10.0'
+        }
+    }
+    jarJar(implementation('org.jetbrains.kotlinx:kotlinx-serialization-protobuf-jvm:1.10.0')) {
+        version {
+            strictly '[1.10.0,1.11.0)'
+            prefer '1.10.0'
+        }
+    }
+}
+
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    var replaceProperties = [
+        minecraft_version: minecraft_version,
+        minecraft_version_range: minecraft_version_range,
+        neo_version: neo_version,
+        neo_version_range: neo_version_range,
+        mod_id: mod_id,
+        mod_name: mod_name,
+        mod_license: mod_license,
+        mod_version: mod_version,
+        artifact_name: artifact_name,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 25
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25
+        javaParameters = true
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    archiveFileName = "${artifact_name}.jar"
+
+    manifest {
+        attributes 'Implementation-Title': mod_name,
+                   'Implementation-Version': mod_version,
+                   'Implementation-Vendor': 'Bomberbude.de',
+                   'Implementation-Copyright': 'Copyright (c) 2026 Bomberbude.de',
+                   'Specification-Title': 'Observable - Remake',
+                   'Specification-Version': mod_version,
+                   'Specification-Vendor': 'Bomberbude.de',
+                   'Bundle-License': 'MPL-2.0'
+    }
+
+    // Ship the full MPL text and attribution/copyright notices inside the JAR.
+    from(rootProject.file('LICENSE')) {
+        into 'META-INF'
+        rename { 'LICENSE-MPL-2.0.txt' }
+    }
+    from(rootProject.file('NOTICE.md')) {
+        into 'META-INF'
+        rename { 'NOTICE.txt' }
+    }
+    from(rootProject.file('COPYRIGHT')) {
+        into 'META-INF'
+        rename { 'COPYRIGHT.txt' }
+    }
+}
