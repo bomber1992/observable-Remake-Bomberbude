@@ -107,6 +107,61 @@ var generateModMetadata = tasks.register('generateModMetadata', ProcessResources
 sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
 
+
+// Profiling mappings are downloaded only while building and are packaged as a
+// normal resource. The released mod performs no runtime mapping download.
+def profilerMappingsUrl = 'https://raw.githubusercontent.com/lucko/spark-mappings/master/dist/1_21_11/mcp.json'
+def generatedProfilerMappingsDir = layout.buildDirectory.dir('generated/profilerMappings')
+def generatedProfilerMappingsFile = generatedProfilerMappingsDir.map {
+    it.file('observable/mappings/1_21_11/mcp.json')
+}
+
+tasks.register('prepareProfilerMappings') {
+    inputs.property('mappingSourceUrl', profilerMappingsUrl)
+    inputs.file(layout.projectDirectory.file('gradle/offline-mappings/1_21_11/mcp.json'))
+    outputs.file(generatedProfilerMappingsFile)
+
+    doLast {
+        def target = generatedProfilerMappingsFile.get().asFile
+        target.parentFile.mkdirs()
+        def temporary = new File(target.parentFile, target.name + '.tmp')
+
+        try {
+            def connection = new URI(profilerMappingsUrl).toURL().openConnection()
+            connection.connectTimeout = 15000
+            connection.readTimeout = 30000
+            connection.setRequestProperty('User-Agent', 'Observable-Remake-Gradle/1.0.1')
+            connection.inputStream.withCloseable { input ->
+                temporary.withOutputStream { output -> input.transferTo(output) }
+            }
+
+            def parsed = new groovy.json.JsonSlurper().parse(temporary)
+            if (!(parsed instanceof Map) || !(parsed.methods instanceof Map)) {
+                throw new GradleException('Downloaded profiler mappings do not contain a methods object.')
+            }
+            java.nio.file.Files.move(
+                temporary.toPath(),
+                target.toPath(),
+                java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                java.nio.file.StandardCopyOption.ATOMIC_MOVE
+            )
+        } catch (Exception error) {
+            temporary.delete()
+            logger.warn('Could not download profiler mappings; using the bundled empty fallback. {}', error.message)
+            copy {
+                from layout.projectDirectory.file('gradle/offline-mappings/1_21_11/mcp.json')
+                into target.parentFile
+                rename { target.name }
+            }
+        }
+    }
+}
+
+sourceSets.main.resources.srcDir generatedProfilerMappingsDir
+tasks.named('processResources').configure {
+    dependsOn tasks.named('prepareProfilerMappings')
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = 25
@@ -145,5 +200,13 @@ tasks.named('jar', Jar).configure {
     from(rootProject.file('COPYRIGHT')) {
         into 'META-INF'
         rename { 'COPYRIGHT.txt' }
+    }
+    from(rootProject.file('PROFILE-DATA-AND-UPLOADS.md')) {
+        into 'META-INF'
+        rename { 'PROFILE-DATA-AND-UPLOADS.txt' }
+    }
+    from(rootProject.file('THIRD-PARTY-NOTICES.md')) {
+        into 'META-INF'
+        rename { 'THIRD-PARTY-NOTICES.txt' }
     }
 }

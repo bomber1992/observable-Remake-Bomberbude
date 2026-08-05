@@ -11,7 +11,7 @@
   "text.observable.unavailable": "Observable не установлен на этом сервере",
   "text.observable.no_permissions": "У вас нет прав для запуска профайлинга",
   "text.observable.error": "Ошибка выполнения действия: %s",
-  "text.observable.report": "Пожалуйста, сообщите об этом на https://github.com/tasgon/observable/issues",
+  "text.observable.report": "Пожалуйста, сообщите об этом на https://github.com/bomber1992/observable-Remake-Bomberbude/issues",
   "text.observable.entity_not_found": "Сущность не найдена. Возможно, она умерла или была удалена",
   "text.observable.get_field": "Введите URL/хэш...",
   "text.observable.get_btn": "Получить!",

@@ -5,19 +5,13 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import observable.Observable
-import java.net.URI
 
+/** NeoForge uses the Forge/MCP method mapping set. */
 enum class ModLoader {
-    FABRIC,
     FORGE
 }
 
-val BASE_URL = "https://raw.githubusercontent.com/lucko/spark-mappings/master/dist/1_21_11"
-val MAPPING_URLS =
-    mapOf(
-        ModLoader.FABRIC to "$BASE_URL/yarn.json",
-        ModLoader.FORGE to "$BASE_URL/mcp.json"
-    )
+private const val MAPPING_RESOURCE = "/observable/mappings/1_21_11/mcp.json"
 
 inline val JsonElement?.stringMap
     get() = this?.jsonObject?.mapValues { it.value.jsonPrimitive.content } ?: mapOf()
@@ -29,14 +23,18 @@ object Remapper {
 
     val remappingData by lazy {
         try {
-            val jsonData = Json.parseToJsonElement(URI.create(MAPPING_URLS.getValue(modLoader)).toURL().readText()).jsonObject
+            check(modLoader == ModLoader.FORGE) { "Unsupported mod loader: $modLoader" }
+            val jsonText = requireNotNull(Remapper::class.java.getResourceAsStream(MAPPING_RESOURCE)) {
+                "Bundled profiler mappings are missing: $MAPPING_RESOURCE"
+            }.bufferedReader(Charsets.UTF_8).use { it.readText() }
+
+            val jsonData = Json.parseToJsonElement(jsonText).jsonObject
             RemappingData(
-                if (modLoader == ModLoader.FABRIC) jsonData["classes"].stringMap else mapOf(),
-                jsonData["methods"].stringMap
+                classes = mapOf(),
+                methods = jsonData["methods"].stringMap
             )
         } catch (e: Exception) {
-            Observable.LOGGER.warn("Unable to get profiling data! ${e.message}")
-            e.printStackTrace()
+            Observable.LOGGER.warn("Bundled profiling mappings could not be loaded: ${e.message}")
             Observable.LOGGER.warn("Remapping data will be unavailable for the remainder of the session")
             RemappingData(mapOf(), mapOf())
         }

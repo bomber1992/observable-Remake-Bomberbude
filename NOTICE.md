@@ -21,7 +21,7 @@ and its contributors:
 - Original project: https://github.com/tasgon/observable
 - Original profile website: https://observable.tas.sh/
 - Remake project: https://github.com/bomber1992/observable-Remake-Bomberbude
-- Remake website: https://bomberbude.de/observable/
+- Remake website: https://obs.bombersbude.de/
 
 All upstream code, names and contributions remain copyrighted by their
 respective authors and contributors. Existing upstream copyright, license,

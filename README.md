@@ -1,9 +1,6 @@
-<img width="1897" height="935" alt="Website-Profiler" src="https://github.com/user-attachments/assets/62580211-9fe3-4d1f-97fd-73eaeb08cdc7" />
+# Observable - Remake V1.0.1
 
-
-# Observable - Remake V1.0
-
-Observable - Remake V1.0 by Bomberbude.de for Minecraft 26.1.2 and NeoForge 26.1.2.74 or newer compatible 26.1.2 builds. It provides tick profiling, in-world lag visualization, the Bomberbude profile service and optional AE2 grid-tick profiling.
+Observable - Remake V1.0.1 by Bomberbude.de for Minecraft 26.1.2 and NeoForge 26.1.2.74 or newer compatible 26.1.2 builds. It provides tick profiling, in-world lag visualization, the Bomberbude profile service and optional AE2 grid-tick profiling.
 
 ## Target environment
 
@@ -18,6 +15,8 @@ No separate Kotlin support mod is required. Kotlin and kotlinx.serialization are
 - TPS profiling with configurable duration and optional stack sampler
 - Per-entity, block entity, scheduled block and fluid tick timings
 - Profiling traces, diagnostics, upload support and local JSON export fallback
+- Public scanner-readable profile upload endpoint with no embedded API key
+- Profiling mappings packaged as a JAR resource; no runtime GitHub download
 - Compressed and chunked client/server result transport for large profiles
 - Permission checks, allow/deny commands and profiling commands
 - Profile screen, settings screen and key binding
@@ -28,6 +27,19 @@ No separate Kotlin support mod is required. Kotlin and kotlinx.serialization are
 - English and Russian translations
 
 The old private-renderer reflection was replaced by Minecraft 26.1's native gizmo renderer. This preserves the overlay behavior while avoiding unstable private rendering internals.
+
+
+## Profile data and network behavior
+
+Completed profiles are uploaded to `https://obs.bombersbude.de/api.php?action=add`.
+The endpoint contains no embedded key. Profile payloads are validated and rate-limited
+by the service. See `PROFILE-DATA-AND-UPLOADS.md` for the exact data scope.
+
+Method mappings are loaded from a resource inside the built JAR. Gradle obtains the
+MCP mapping JSON at build time and packages it; the running mod no longer downloads
+that file from GitHub. If the mapping download is unavailable during a build, an empty
+offline fallback is packaged and stack traces remain usable without friendly method
+remapping.
 
 ## Build
 
@@ -88,7 +100,7 @@ commands and profiling continue to work independently of client installation.
 The standard build produces:
 
 ```text
-Observable-Remake-V1.0-NeoForge-26.1.2.74.jar
+Observable-Remake-V1.0.1-NeoForge-26.1.2.74.jar
 ```
 
 The internal mod ID remains `observable` so existing configuration, commands, packets and mixins remain compatible.
