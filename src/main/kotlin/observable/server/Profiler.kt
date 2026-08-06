@@ -73,6 +73,12 @@ class Profiler {
     fun process(entity: Entity) =
         timingsMap.getOrPut(entity) { TimingData(0, 0, TraceMap(entity::class)) }
 
+    fun shouldIgnoreBlockEntity(blockEntity: TickingBlockEntity): Boolean =
+        isIgnoredSignType(blockEntity.type)
+
+    fun shouldIgnoreBlock(blockState: BlockState): Boolean =
+        isIgnoredSignType(BuiltInRegistries.BLOCK.getKey(blockState.block).toString())
+
     fun processBlockEntity(blockEntity: TickingBlockEntity, level: Level) =
         blockTimingsMap
             .getOrPut(level.dimension()) { HashMap() }

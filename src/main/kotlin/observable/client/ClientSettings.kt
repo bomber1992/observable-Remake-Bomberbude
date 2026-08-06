@@ -57,7 +57,13 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
     }
 
     val fields =
-        listOf("maxBlockDist", "maxEntityDist", "maxEntityCount", "normalize").map {
+        listOf(
+            "maxBlockDist",
+            "maxBlockCount",
+            "maxEntityDist",
+            "maxEntityCount",
+            "normalize"
+        ).map {
             Component.translatable("text.observable.$it")
         }
 
@@ -65,16 +71,17 @@ class ClientSettingsGui : Screen(Component.translatable("screen.observable.clien
         super.init()
 
         entry(20, ClientSettings::maxBlockDist)
-        entry(40, ClientSettings::maxEntityDist)
-        entry(60, ClientSettings::maxEntityCount)
+        entry(40, ClientSettings::maxBlockCount)
+        entry(60, ClientSettings::maxEntityDist)
+        entry(80, ClientSettings::maxEntityCount)
         addRenderableWidget(
             BetterCheckbox(
                 width * 3 / 4,
-                90,
+                110,
                 width / 2,
                 20,
                 Component.literal(""),
-                true
+                ClientSettings.normalized
             ) {
                 ClientSettings.normalized = it
             }

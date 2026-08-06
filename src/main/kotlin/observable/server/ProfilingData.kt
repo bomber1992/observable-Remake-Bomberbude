@@ -53,14 +53,23 @@ data class ProfilingData(
             blocks.forEach { (level, posMap) ->
                 blockEntries
                     .getOrPut(level.identifier()) { mutableListOf() }
-                    .addAll(posMap.map { (pos, data) -> Entry(pos, data.name, data) })
+                    .addAll(
+                        posMap
+                            .asSequence()
+                            .filterNot { (_, data) -> isIgnoredSignType(data.name) }
+                            .map { (pos, data) -> Entry(pos, data.name, data) }
+                            .toList()
+                    )
             }
 
-            positionedTimings.forEach { positioned ->
-                blockEntries
-                    .getOrPut(positioned.dimension.identifier()) { mutableListOf() }
-                    .add(Entry(positioned.position, positioned.data.name, positioned.data))
-            }
+            positionedTimings
+                .asSequence()
+                .filterNot { positioned -> isIgnoredSignType(positioned.data.name) }
+                .forEach { positioned ->
+                    blockEntries
+                        .getOrPut(positioned.dimension.identifier()) { mutableListOf() }
+                        .add(Entry(positioned.position, positioned.data.name, positioned.data))
+                }
 
             return ProfilingData(
                 entityEntries,

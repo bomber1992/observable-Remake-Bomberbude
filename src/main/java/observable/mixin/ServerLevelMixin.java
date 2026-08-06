@@ -38,7 +38,7 @@ public class ServerLevelMixin {
     @Redirect(method = "tickBlock", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/state/BlockState;tick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/util/RandomSource;)V"))
     public final void observable$onTickBlock(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        if (Props.notProcessing) state.tick(level, pos, random);
+        if (Props.notProcessing || Observable.INSTANCE.getPROFILER().shouldIgnoreBlock(state)) state.tick(level, pos, random);
         else {
             if (Props.blockDepth < 0) Props.blockDepth = Thread.currentThread().getStackTrace().length - 1;
             Profiler.TimingData data = Observable.INSTANCE.getPROFILER().processBlock(state, pos, level);

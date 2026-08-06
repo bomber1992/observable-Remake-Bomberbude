@@ -113,30 +113,43 @@ object Overlay {
 
     private fun collectBlocks(playerPos: BlockPos, cameraPos: Vec3) {
         val chunk = ChunkPos.containing(playerPos)
-        val chunkDistance = (ClientSettings.maxBlockDist / 16).coerceAtLeast(2)
-        val maxDistanceSqr = ClientSettings.maxBlockDist.toDouble() * ClientSettings.maxBlockDist
-        var rendered = 0
+        val maxDistance = ClientSettings.maxBlockDist.coerceAtLeast(0)
+        val chunkDistance = ((maxDistance + 15) / 16).coerceAtLeast(2)
+        val maxHorizontalDistanceSqr = maxDistance.toDouble() * maxDistance
+        val candidates = ArrayList<Entry.BlockEntry>()
 
         for (x in (chunk.x - chunkDistance)..(chunk.x + chunkDistance)) {
             for (z in (chunk.z - chunkDistance)..(chunk.z + chunkDistance)) {
                 for (entry in blockMap[ChunkPos(x, z)].orEmpty()) {
-                    if (rendered >= ClientSettings.maxBlockCount) return
-                    if (Vec3.atCenterOf(entry.pos).distanceToSqr(cameraPos) > maxDistanceSqr) continue
+                    val center = Vec3.atCenterOf(entry.pos)
+                    val deltaX = center.x - cameraPos.x
+                    val deltaZ = center.z - cameraPos.z
 
-                    val style = GizmoStyle.strokeAndFill(
-                        entry.color.opaqueArgb,
-                        1.5F,
-                        entry.color.translucentArgb
-                    )
-                    Gizmos.cuboid(entry.pos, style).setAlwaysOnTop()
-                    Gizmos.billboardText(
-                        formatRate(entry.rate),
-                        Vec3.atCenterOf(entry.pos),
-                        TextGizmo.Style.forColorAndCentered(0xFFFFFFFF.toInt()).withScale(0.75F)
-                    ).setAlwaysOnTop()
-                    rendered++
+                    // Block overlays use horizontal distance only. This keeps profiled
+                    // targets visible when the player is far above or below them.
+                    if (deltaX * deltaX + deltaZ * deltaZ > maxHorizontalDistanceSqr) continue
+                    candidates += entry
                 }
             }
+        }
+
+        // Preserve the highest-impact entries instead of whichever chunks happen
+        // to be traversed first.
+        for (entry in candidates
+            .sortedByDescending { it.rate }
+            .take(ClientSettings.maxBlockCount.coerceAtLeast(0))) {
+            val center = Vec3.atCenterOf(entry.pos)
+            val style = GizmoStyle.strokeAndFill(
+                entry.color.opaqueArgb,
+                1.5F,
+                entry.color.translucentArgb
+            )
+            Gizmos.cuboid(entry.pos, style).setAlwaysOnTop()
+            Gizmos.billboardText(
+                formatRate(entry.rate),
+                center,
+                TextGizmo.Style.forColorAndCentered(0xFFFFFFFF.toInt()).withScale(0.75F)
+            ).setAlwaysOnTop()
         }
     }
 

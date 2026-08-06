@@ -7,7 +7,8 @@ https://obs.bombersbude.de/
 The report contains Minecraft server profiling information needed for analysis,
 including tick timings, entities, block entities, chunks, execution traces,
 diagnostics and the player name that started the profiling session when one is
-available.
+available. Sign and hanging-sign targets are intentionally excluded from
+profiling and therefore are not included in uploaded reports.
 
 The upload implementation does not intentionally collect passwords,
 authentication tokens, private chat messages or arbitrary files from the host.

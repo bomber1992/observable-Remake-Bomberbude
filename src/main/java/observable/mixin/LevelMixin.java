@@ -25,7 +25,7 @@ public class LevelMixin {
     @Redirect(method = "tickBlockEntities", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/block/entity/TickingBlockEntity;tick()V"))
     public final void observable$redirectTick(TickingBlockEntity blockEntity) {
-        if (Props.notProcessing) blockEntity.tick();
+        if (Props.notProcessing || Observable.INSTANCE.getPROFILER().shouldIgnoreBlockEntity(blockEntity)) blockEntity.tick();
         else {
             if (Props.blockEntityDepth < 0) Props.blockEntityDepth = Thread.currentThread().getStackTrace().length - 1;
             if ((Object)this instanceof ServerLevel) {
